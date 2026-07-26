@@ -1,17 +1,10 @@
-# flutter_to_apk
+** This repo is just to covert Dart code into Apk with Github action (CI/CD) **
 
-A new Flutter project.
+## Demo Image Of Lst Project Made with Dart Flutter
 
-## Getting Started
+[![Screenshot-2026-07-26-17-53-55-931-com-miui-home.png](https://i.postimg.cc/bYLfL37H/Screenshot-2026-07-26-17-53-55-931-com-miui-home.png)](https://postimg.cc/z3LQGSXV)
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+[![Screenshot-2026-07-26-17-58-19-330-com-mi-globalbrowser.png](https://i.postimg.cc/FsqqnqDB/Screenshot-2026-07-26-17-58-19-330-com-mi-globalbrowser.png)](https://postimg.cc/rK1QDh61)
+---
+[![Screenshot-2026-07-26-17-58-35-418-com-mi-globalbrowser.png](https://i.postimg.cc/j22gMQNd/Screenshot-2026-07-26-17-58-35-418-com-mi-globalbrowser.png)](https://postimg.cc/dZMj1C4z)
