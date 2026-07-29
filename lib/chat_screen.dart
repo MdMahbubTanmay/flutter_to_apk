@@ -23,6 +23,8 @@ class ChatMessage {
         'sender': sender,
         'text': text,
         'type': type.name,
+        'checklist': checklist,
+        'roadmapSteps': roadmapSteps,
       };
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -32,14 +34,28 @@ class ChatMessage {
           (e) => e.name == json['type'],
           orElse: () => MessageType.text,
         ),
+        checklist: json['checklist'] != null
+            ? List<Map<String, dynamic>>.from(json['checklist'])
+            : null,
+        roadmapSteps: json['roadmapSteps'] != null
+            ? (json['roadmapSteps'] as List)
+                .map((e) => Map<String, String>.from(e))
+                .toList()
+            : null,
       );
 }
 
 class ChatScreen extends StatefulWidget {
   final String? initialQuery;
   final bool startVoiceRecorder;
+  final String? existingSessionId;
 
-  const ChatScreen({super.key, this.initialQuery, this.startVoiceRecorder = false});
+  const ChatScreen({
+    super.key,
+    this.initialQuery,
+    this.startVoiceRecorder = false,
+    this.existingSessionId,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -50,17 +66,37 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   int _storyStep = 0;
   bool _isRecording = false;
+  bool _isTyping = false;
   late String _sessionId;
 
   @override
   void initState() {
     super.initState();
-    _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    _sessionId = widget.existingSessionId ?? DateTime.now().millisecondsSinceEpoch.toString();
 
-    if (widget.startVoiceRecorder) {
+    if (widget.existingSessionId != null) {
+      _loadExistingSession(widget.existingSessionId!);
+    } else if (widget.startVoiceRecorder) {
       _isRecording = true;
-    } else if (widget.initialQuery != null) {
+    } else if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       _sendMessage(widget.initialQuery!);
+    }
+  }
+
+  Future<void> _loadExistingSession(String sessionId) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> rawSessions = prefs.getStringList('chat_sessions') ?? [];
+
+    for (String s in rawSessions) {
+      Map<String, dynamic> decoded = jsonDecode(s);
+      if (decoded['id'] == sessionId) {
+        List messagesJson = decoded['messages'] ?? [];
+        setState(() {
+          _messages.clear();
+          _messages.addAll(messagesJson.map((m) => ChatMessage.fromJson(m)).toList());
+        });
+        break;
+      }
     }
   }
 
@@ -69,40 +105,46 @@ class _ChatScreenState extends State<ChatScreen> {
 
     setState(() {
       _messages.add(ChatMessage(sender: 'user', text: text));
+      _isTyping = true;
     });
-    _saveEntireSessionHistory();
+    _saveSessionHistory();
     _controller.clear();
 
-    Future.delayed(const Duration(milliseconds: 600), () {
-      _processStoryResponse(text);
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (mounted) {
+        setState(() => _isTyping = false);
+        _processStoryResponse(text);
+      }
     });
   }
 
   void _processStoryResponse(String userText) {
     String lower = userText.toLowerCase();
 
-    // Check for polite closing
     if (lower.contains('tnx') || lower.contains('thanks') || lower.contains('ধন্যবাদ')) {
-      _addAppMessage("আপনাকে অনেক ধন্যবাদ! Legal GPS-এর সাথে থাকার জন্য স্বাগতম। আপনার যেকোনো আইনি প্রয়োজনে সাহায্য করতে পেরে আনন্দিত।");
+      _addAppMessage("আপনাকে অনেক ধন্যবাদ! Legal GPS-এর সাথে থাকার জন্য স্বাগতম। আপনার যেকোনো আইনি প্রয়োজনে আমি আছি।");
+      return;
+    }
+
+    if (lower.contains('jomi') || lower.contains('land') || lower.contains('জমি')) {
+      _addAppMessage(
+        "বাংলাদেশ সংবিধানের ৪২ নম্বর অনুচ্ছেদ (Article 42) অনুযায়ী প্রতিটি নাগরিকের সম্পত্তি অর্জন, ধারণ ও হস্তান্তরের অধিকার রয়েছে।\n\n"
+        "এছাড়া State Acquisition and Tenancy Act, 1950 অনুযায়ী জমি সংক্রান্ত বিরোধ নিষ্পত্তিতে মালিকানা দলিল ও খতিয়ান অতি জরুরি।\n\n"
+        "আমি কি আপনার প্রয়োজনীয় ডকুমেন্টগুলোর বর্তমান অবস্থা পরীক্ষা (Check) করে দেখব?",
+      );
+      _storyStep = 2;
       return;
     }
 
     if (_storyStep == 0) {
       _addAppMessage("Hello! Legal GPS-এ আপনাকে স্বাগতম। গণপ্রজাতন্ত্রী বাংলাদেশের সংবিধান এবং প্রচলিত আইন অনুযায়ী আপনার সমস্যা শুনছি। বলুন কীভাবে সাহায্য করতে পারি?");
       _storyStep = 1;
-    } else if (_storyStep == 1 || lower.contains('jomi') || lower.contains('land') || lower.contains('জমি')) {
-      _addAppMessage(
-        "বাংলাদেশ সংবিধানের ৪২ নম্বর অনুচ্ছেদ (Article 42) অনুযায়ী প্রতিটি নাগরিকের সম্পত্তি অর্জন, ধারণ ও হস্তান্তরের অধিকার রয়েছে।\n\n"
-        "এছাড়া State Acquisition and Tenancy Act, 1950 অনুযায়ী জমি সংক্রান্ত বিরোধ নিষ্পত্তিতে মালিকানা দলিল ও খতিয়ান অতি জরুরি।\n\n"
-        "আমি কি আপনার প্রয়োজনীয় ডকুমেন্টগুলোর বর্তমান অবস্থা পরীক্ষা (Check) করে দেখব?",
-      );
-      _storyStep = 2; // Waiting for permission to check docs
     } else if (_storyStep == 2 && (_isAffirmative(lower) || lower.contains('check') || lower.contains('চেক'))) {
       _showInitialPartialChecklist();
-      _storyStep = 3; // Waiting for re-check command after upload
+      _storyStep = 3;
     } else if (_storyStep == 3 && (lower.contains('again') || lower.contains('check') || lower.contains('upload') || lower.contains('চেক'))) {
       _showAllCompletedChecklist();
-      _storyStep = 4; // Waiting for roadmap creation confirmation
+      _storyStep = 4;
     } else if (_storyStep == 4 && (_isAffirmative(lower) || lower.contains('roadmap') || lower.contains('রোডম্যাপ'))) {
       _generateRoadmapWidget();
       _storyStep = 5;
@@ -119,10 +161,9 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.add(ChatMessage(sender: 'app', text: text));
     });
-    _saveEntireSessionHistory();
+    _saveSessionHistory();
   }
 
-  // Initial document state: 2 present, 2 missing
   void _showInitialPartialChecklist() {
     List<Map<String, dynamic>> initialItems = [
       {'title': 'মূল ক্রয় দলিল (Deed of Sale)', 'checked': true},
@@ -141,10 +182,9 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     });
-    _saveEntireSessionHistory();
+    _saveSessionHistory();
   }
 
-  // All documents verified state
   void _showAllCompletedChecklist() {
     List<Map<String, dynamic>> completedItems = [
       {'title': 'মূল ক্রয় দলিল (Deed of Sale)', 'checked': true},
@@ -163,7 +203,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     });
-    _saveEntireSessionHistory();
+    _saveSessionHistory();
   }
 
   void _generateRoadmapWidget() {
@@ -198,16 +238,18 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     });
-    _saveEntireSessionHistory();
+    _saveSessionHistory();
   }
 
-  Future<void> _saveEntireSessionHistory() async {
+  Future<void> _saveSessionHistory() async {
+    if (_messages.isEmpty) return;
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String> rawSessions = prefs.getStringList('chat_sessions') ?? [];
 
     String firstUserMessage = _messages.firstWhere(
       (m) => m.sender == 'user',
-      orElse: () => ChatMessage(sender: 'user', text: 'New Case Query'),
+      orElse: () => ChatMessage(sender: 'user', text: 'Legal Consultation'),
     ).text;
 
     Map<String, dynamic> sessionData = {
@@ -225,7 +267,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (existingIndex != -1) {
       rawSessions[existingIndex] = jsonEncode(sessionData);
     } else {
-      rawSessions.add(jsonEncode(sessionData));
+      rawSessions.insert(0, jsonEncode(sessionData));
     }
 
     await prefs.setStringList('chat_sessions', rawSessions);
@@ -241,8 +283,12 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
+              itemCount: _messages.length + (_isTyping ? 1 : 0),
               itemBuilder: (context, index) {
+                if (index == _messages.length && _isTyping) {
+                  return _buildTypingIndicator();
+                }
+
                 final msg = _messages[index];
                 bool isUser = msg.sender == 'user';
 
@@ -298,6 +344,35 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           )
         ],
+      ),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0F5257)),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Legal GPS thinking...',
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
       ),
     );
   }

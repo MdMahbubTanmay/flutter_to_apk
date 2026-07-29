@@ -11,105 +11,112 @@ class MyCasesScreen extends StatefulWidget {
 }
 
 class _MyCasesScreenState extends State<MyCasesScreen> {
-  List<Map<String, String>> _history = [];
+  List<Map<String, dynamic>> _savedSessions = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadHistory();
+    _loadCasesHistory();
   }
 
-  Future<void> _loadHistory() async {
+  Future<void> _loadCasesHistory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> rawHistory = prefs.getStringList('chat_history') ?? [];
+    List<String> rawSessions = prefs.getStringList('chat_sessions') ?? [];
+
+    List<Map<String, dynamic>> loaded = [];
+    for (String s in rawSessions) {
+      try {
+        loaded.add(jsonDecode(s));
+      } catch (e) {
+        debugPrint("Error decoding session: $e");
+      }
+    }
+
     setState(() {
-      _history = rawHistory.map((e) => Map<String, String>.from(jsonDecode(e))).toList();
+      _savedSessions = loaded;
+      _isLoading = false;
     });
   }
 
   Future<void> _deleteCase(int index) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _history.removeAt(index);
-    });
-    List<String> updatedRaw = _history.map((e) => jsonEncode(e)).toList();
-    await prefs.setStringList('chat_history', updatedRaw);
-  }
+    List<String> rawSessions = prefs.getStringList('chat_sessions') ?? [];
 
-  Future<void> _clearAllHistory() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.remove('chat_history');
-    setState(() {
-      _history.clear();
-    });
+    if (index < rawSessions.length) {
+      rawSessions.removeAt(index);
+      await prefs.setStringList('chat_sessions', rawSessions);
+      _loadCasesHistory();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Case History'),
-        actions: [
-          if (_history.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_sweep, color: Colors.red),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text('Clear All Case History?'),
-                    content: const Text('Are you sure you want to remove all previous case logs?'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                      TextButton(
-                        onPressed: () {
-                          _clearAllHistory();
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Clear All', style: TextStyle(color: Colors.red)),
+        title: const Text('My Cases History'),
+        backgroundColor: const Color(0xFF0F5257),
+        foregroundColor: Colors.white,
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _savedSessions.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.folder_off_outlined, size: 64, color: Colors.grey),
+                      SizedBox(height: 12),
+                      Text(
+                        'No cases recorded yet.',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
                       ),
                     ],
                   ),
-                );
-              },
-            )
-        ],
-      ),
-      body: _history.isEmpty
-          ? const Center(child: Text('No Previous Case Queries Found.'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _history.length,
-              itemBuilder: (context, index) {
-                final item = _history[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  child: ListTile(
-                    leading: const Icon(Icons.history_toggle_off, color: Color(0xFF0F5257)),
-                    title: Text(item['title'] ?? 'Legal Query', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Date: ${item['date']}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _savedSessions.length,
+                  itemBuilder: (context, index) {
+                    final session = _savedSessions[index];
+                    String title = session['title'] ?? 'Legal Case';
+                    String date = session['date'] ?? 'Recent';
+                    String sessionId = session['id'];
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      child: ListTile(
+                        leading: const CircleAvatar(
+                          backgroundColor: Color(0xFF0F5257),
+                          child: Icon(Icons.gavel, color: Colors.white, size: 20),
+                        ),
+                        title: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text('Date: $date'),
+                        trailing: IconButton(
                           icon: const Icon(Icons.delete_outline, color: Colors.red),
                           onPressed: () => _deleteCase(index),
                         ),
-                        const Icon(Icons.arrow_forward_ios, size: 14),
-                      ],
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatScreen(initialQuery: item['title']),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChatScreen(
+                                existingSessionId: sessionId,
+                              ),
+                            ),
+                          ).then((_) => _loadCasesHistory());
+                        },
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
