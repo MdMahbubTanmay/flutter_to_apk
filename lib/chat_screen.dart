@@ -64,7 +64,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final List<ChatMessage> _messages = [];
   final TextEditingController _controller = TextEditingController();
-  int _storyStep = 0;
+  int _storyStep = 0; // State variable step
   bool _isRecording = false;
   bool _isTyping = false;
   late String _sessionId;
@@ -94,6 +94,8 @@ class _ChatScreenState extends State<ChatScreen> {
         setState(() {
           _messages.clear();
           _messages.addAll(messagesJson.map((m) => ChatMessage.fromJson(m)).toList());
+          // RESTORE THE STORY STEP
+          _storyStep = decoded['storyStep'] ?? 0;
         });
         break;
       }
@@ -133,6 +135,7 @@ class _ChatScreenState extends State<ChatScreen> {
         "আমি কি আপনার প্রয়োজনীয় ডকুমেন্টগুলোর বর্তমান অবস্থা পরীক্ষা (Check) করে দেখব?",
       );
       _storyStep = 2;
+      _saveSessionHistory();
       return;
     }
 
@@ -151,6 +154,8 @@ class _ChatScreenState extends State<ChatScreen> {
     } else {
       _addAppMessage("ধন্যবাদ! অন্য যেকোনো আইনি পরামর্শ বা ধারা জানতে আমাকে প্রশ্ন করতে পারেন।");
     }
+
+    _saveSessionHistory();
   }
 
   bool _isAffirmative(String input) {
@@ -161,7 +166,6 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.add(ChatMessage(sender: 'app', text: text));
     });
-    _saveSessionHistory();
   }
 
   void _showInitialPartialChecklist() {
@@ -182,7 +186,6 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     });
-    _saveSessionHistory();
   }
 
   void _showAllCompletedChecklist() {
@@ -203,7 +206,6 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     });
-    _saveSessionHistory();
   }
 
   void _generateRoadmapWidget() {
@@ -238,7 +240,6 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     });
-    _saveSessionHistory();
   }
 
   Future<void> _saveSessionHistory() async {
@@ -256,6 +257,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'id': _sessionId,
       'title': firstUserMessage,
       'date': DateTime.now().toString().split(' ')[0],
+      'storyStep': _storyStep, // PERSIST STORY STEP
       'messages': _messages.map((m) => m.toJson()).toList(),
     };
 
