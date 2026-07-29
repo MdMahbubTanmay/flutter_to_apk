@@ -1,0 +1,41 @@
+[33mcommit 2140cf8d0ca4228577ad192bb7d3029f123e6e19[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: MdMahbubTanmay <m19212628@gmail.com>
+Date:   Wed Jul 29 15:02:17 2026 +0600
+
+    updated everything
+
+[33mcommit f78b406581700410d4cf9c9ffcfecec228304dca[m[33m ([m[1;31morigin/main[m[33m)[m
+Author: MdMahbubTanmay <m19212628@gmail.com>
+Date:   Sun Jul 26 18:03:08 2026 +0600
+
+    Added chat screen with prebuilt command and added history section previously and this time updated readme.md
+
+[33mcommit bef22db58b411fd2446a9c547e73f502f29c08d5[m
+Author: MdMahbubTanmay <m19212628@gmail.com>
+Date:   Sun Jul 26 17:48:59 2026 +0600
+
+    Added chat screen with prebuilt command and added history section
+
+[33mcommit 5e3b1e1948ab37410b2761e7e859a6aaf927ec9d[m
+Author: MdMahbubTanmay <m19212628@gmail.com>
+Date:   Sun Jul 26 01:33:50 2026 +0600
+
+    Added Home screen for Legal GPS
+
+[33mcommit 3da19a262304173fef6a7ec5ace452a0660de728[m
+Author: MdMahbubTanmay <m19212628@gmail.com>
+Date:   Fri Jul 24 23:49:25 2026 +0600
+
+    Added Curved Stylish Container
+
+[33mcommit a1f1b2b23a3ba2d385e6cbeb753f0508c72dbf7c[m
+Author: MdMahbubTanmay <m19212628@gmail.com>
+Date:   Fri Jul 24 19:31:03 2026 +0600
+
+    Added yml file to auto make apk file
+
+[33mcommit 493428593f74cef4137673a54715919bc6c226bc[m
+Author: MdMahbubTanmay <m19212628@gmail.com>
+Date:   Fri Jul 24 19:27:04 2026 +0600
+
+    Initial Commit

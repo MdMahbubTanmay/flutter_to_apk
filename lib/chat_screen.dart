@@ -81,9 +81,9 @@ class _ChatScreenState extends State<ChatScreen> {
   void _processStoryResponse(String userText) {
     String lower = userText.toLowerCase();
 
-    // Check for thank you response at any point
+    // Check for polite closing
     if (lower.contains('tnx') || lower.contains('thanks') || lower.contains('ধন্যবাদ')) {
-      _addAppMessage("আপনাকে অনেক ধন্যবাদ! Legal GPS-এর সাথে থাকার জন্য স্বাগতম। আপনার যেকোনো আইনি প্রয়োজনে আমি সবসময় আছি।");
+      _addAppMessage("আপনাকে অনেক ধন্যবাদ! Legal GPS-এর সাথে থাকার জন্য স্বাগতম। আপনার যেকোনো আইনি প্রয়োজনে সাহায্য করতে পেরে আনন্দিত।");
       return;
     }
 
@@ -93,19 +93,26 @@ class _ChatScreenState extends State<ChatScreen> {
     } else if (_storyStep == 1 || lower.contains('jomi') || lower.contains('land') || lower.contains('জমি')) {
       _addAppMessage(
         "বাংলাদেশ সংবিধানের ৪২ নম্বর অনুচ্ছেদ (Article 42) অনুযায়ী প্রতিটি নাগরিকের সম্পত্তি অর্জন, ধারণ ও হস্তান্তরের অধিকার রয়েছে।\n\n"
-        "জমি ও সম্পত্তি সংক্রান্ত আইনগত সমাধানের জন্য (State Acquisition and Tenancy Act, 1950) অনুযায়ী জমি সংক্রান্ত কাগজপত্র পর্যালোচনা করা প্রয়োজন। চলুন আপনার ডকুমেন্টগুলো চেক করি।",
+        "এছাড়া State Acquisition and Tenancy Act, 1950 অনুযায়ী জমি সংক্রান্ত বিরোধ নিষ্পত্তিতে মালিকানা দলিল ও খতিয়ান অতি জরুরি।\n\n"
+        "আমি কি আপনার প্রয়োজনীয় ডকুমেন্টগুলোর বর্তমান অবস্থা পরীক্ষা (Check) করে দেখব?",
       );
+      _storyStep = 2; // Waiting for permission to check docs
+    } else if (_storyStep == 2 && (_isAffirmative(lower) || lower.contains('check') || lower.contains('চেক'))) {
       _showInitialPartialChecklist();
-      _storyStep = 2;
-    } else if (_storyStep == 2 || lower.contains('check') || lower.contains('upload') || lower.contains('চেক')) {
+      _storyStep = 3; // Waiting for re-check command after upload
+    } else if (_storyStep == 3 && (lower.contains('again') || lower.contains('check') || lower.contains('upload') || lower.contains('চেক'))) {
       _showAllCompletedChecklist();
-      _storyStep = 3;
-    } else if (_storyStep == 3 || lower.contains('yes') || lower.contains('হ্যাঁ') || lower.contains('road') || lower.contains('রোডম্যাপ')) {
+      _storyStep = 4; // Waiting for roadmap creation confirmation
+    } else if (_storyStep == 4 && (_isAffirmative(lower) || lower.contains('roadmap') || lower.contains('রোডম্যাপ'))) {
       _generateRoadmapWidget();
-      _storyStep = 4;
+      _storyStep = 5;
     } else {
-      _addAppMessage("ধন্যবাদ! অন্য কোনো আইনি তথ্য বা ধারার ব্যাখ্যা জানতে প্রশ্ন করতে পারেন।");
+      _addAppMessage("ধন্যবাদ! অন্য যেকোনো আইনি পরামর্শ বা ধারা জানতে আমাকে প্রশ্ন করতে পারেন।");
     }
+  }
+
+  bool _isAffirmative(String input) {
+    return input.contains('yes') || input.contains('koro') || input.contains('হ্যাঁ') || input.contains('করো') || input.contains('ok') || input.contains('করুন');
   }
 
   void _addAppMessage(String text) {
@@ -115,7 +122,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _saveEntireSessionHistory();
   }
 
-  // First check: Shows 2 uploaded and 2 missing
+  // Initial document state: 2 present, 2 missing
   void _showInitialPartialChecklist() {
     List<Map<String, dynamic>> initialItems = [
       {'title': 'মূল ক্রয় দলিল (Deed of Sale)', 'checked': true},
@@ -128,7 +135,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.add(
         ChatMessage(
           sender: 'app',
-          text: "আপনার আপলোড করা ডকুমেন্টের আইনি চেকলিস্ট অবস্থা:\n\nআপনার ২ টি ডকুমেন্ট পাওয়া গেছে এবং ২ টি অনুপস্থিত (Missing)। অনুগ্রহ করে বাকি ২ টি ডকুমেন্ট আপলোড করে 'Check Again' বলুন।",
+          text: "আপনার আপলোডকৃত ডকুমেন্টস পরীক্ষা করে পাওয়া গেছে:\n\n• ২ টি দলিল পাওয়া গেছে (Uploaded)\n• ২ টি দলিল অনুপস্থিত (Missing)\n\nঅনুপস্থিত ফাইলগুলো আপলোড করে আমাকে 'Check Again' বললে আমি পুনরায় পুরোটি রিভিউ করব।",
           type: MessageType.documentChecklist,
           checklist: initialItems,
         ),
@@ -137,7 +144,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _saveEntireSessionHistory();
   }
 
-  // Second check: Shows all 4 documents uploaded
+  // All documents verified state
   void _showAllCompletedChecklist() {
     List<Map<String, dynamic>> completedItems = [
       {'title': 'মূল ক্রয় দলিল (Deed of Sale)', 'checked': true},
@@ -150,7 +157,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.add(
         ChatMessage(
           sender: 'app',
-          text: "ধন্যবাদ! আপনার সকল প্রয়োজনীয় ডকুমেন্ট সফলভাবে আপলোড করা হয়েছে (৪/৪ সম্পন্ন)।\n\nআমি কি এখন আপনার জন্য আইনি অ্যাকশন রোডম্যাপ (Action Roadmap) প্রস্তুত করব?",
+          text: "চমৎকার! আপনার সকল প্রয়োজনীয় ফাইল সফলভাবে জমা হয়েছে (৪/৪ সম্পন্ন)।\n\nসবগুলো তথ্য সঠিকভাবে নিবন্ধিত মনে হচ্ছে। আমি কি আপনার আইনি সমাধানের জন্য অ্যাকশন রোডম্যাপ (Roadmap) তৈরি করব?",
           type: MessageType.documentChecklist,
           checklist: completedItems,
         ),
@@ -185,7 +192,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.add(
         ChatMessage(
           sender: 'app',
-          text: "আপনার সমস্যার জন্য প্রস্তুতকৃত আইনগত সমাধান রোডম্যাপ নিচে দেয়া হলো:",
+          text: "আপনার জন্য প্রস্তুতকৃত আইনি পদক্ষেপের বিস্তারিত সমাধান রোডম্যাপ:",
           type: MessageType.roadmap,
           roadmapSteps: steps,
         ),
@@ -194,14 +201,13 @@ class _ChatScreenState extends State<ChatScreen> {
     _saveEntireSessionHistory();
   }
 
-  // Saves the whole conversation under a single session entry in SharedPreferences
   Future<void> _saveEntireSessionHistory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String> rawSessions = prefs.getStringList('chat_sessions') ?? [];
 
     String firstUserMessage = _messages.firstWhere(
       (m) => m.sender == 'user',
-      orElse: () => ChatMessage(sender: 'user', text: 'New Consultation'),
+      orElse: () => ChatMessage(sender: 'user', text: 'New Case Query'),
     ).text;
 
     Map<String, dynamic> sessionData = {

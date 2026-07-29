@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "com.example.flutter_to_apk"
-    compileSdk = flutter.compileSdkVersion
+    
+    // OVERRIDE HERE: Hardcode to 36 instead of flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
