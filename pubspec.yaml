@@ -31,7 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   shared_preferences: ^2.2.2
-  file_picker: ^11.0.2
+  file_picker: ^10.3.10
   local_auth: ^2.1.8
 
 

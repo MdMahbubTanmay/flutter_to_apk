@@ -41,7 +41,9 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   }
 
   Future<void> _pickAndSaveDocument() async {
-    FilePickerResult? result = await FilePicker.pickFiles();
+    
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+
 
     if (result != null && result.files.isNotEmpty) {
       String fileName = result.files.single.name;
