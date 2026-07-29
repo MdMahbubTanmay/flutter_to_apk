@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DocumentsScreen extends StatefulWidget {
@@ -13,6 +13,12 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   bool _isAuthenticated = false;
   final TextEditingController _pinController = TextEditingController();
   List<String> _docTitles = [];
+
+  @override
+  void dispose() {
+    _pinController.dispose();
+    super.dispose();
+  }
 
   void _verifyPin() {
     if (_pinController.text == "1234") {
@@ -37,18 +43,18 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   Future<void> _pickAndSaveDocument() async {
     FilePickerResult? result = await FilePicker.pickFiles();
 
-
-    if (result != null) {
+    if (result != null && result.files.isNotEmpty) {
       String fileName = result.files.single.name;
       _showTitleDialog(fileName);
     }
   }
 
   void _showTitleDialog(String fileName) {
-    TextEditingController titleController = TextEditingController(text: fileName);
+    final TextEditingController titleController = TextEditingController(text: fileName);
+
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Enter Document Title'),
         content: TextField(
           controller: titleController,
@@ -57,13 +63,19 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         actions: [
           TextButton(
             onPressed: () async {
-              if (titleController.text.isNotEmpty) {
+              String trimmedText = titleController.text.trim();
+              if (trimmedText.isNotEmpty) {
                 SharedPreferences prefs = await SharedPreferences.getInstance();
-                _docTitles.add(titleController.text.trim());
-                await prefs.setStringList('saved_docs', _docTitles);
-                setState(() {});
+                List<String> updatedList = List.from(_docTitles)..add(trimmedText);
+                await prefs.setStringList('saved_docs', updatedList);
+
                 if (!mounted) return;
-                Navigator.pop(context);
+
+                setState(() {
+                  _docTitles = updatedList;
+                });
+                
+                Navigator.pop(dialogContext);
               }
             },
             child: const Text('Save'),
@@ -131,15 +143,15 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               onPressed: () {
                 showDialog(
                   context: context,
-                  builder: (_) => AlertDialog(
+                  builder: (dialogContext) => AlertDialog(
                     title: const Text('Clear All Documents?'),
                     content: const Text('Are you sure you want to delete all uploaded document records?'),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                      TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
                       TextButton(
                         onPressed: () {
                           _clearAllDocuments();
-                          Navigator.pop(context);
+                          Navigator.pop(dialogContext);
                         },
                         child: const Text('Delete All', style: TextStyle(color: Colors.red)),
                       )
